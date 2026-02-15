@@ -338,9 +338,8 @@ async function runCAPM() {
     document.getElementById('alphaCoefCell').textContent = formatNum(reg.alpha);
     document.getElementById('alphaSeCell').textContent = formatNum(reg.seAlpha);
     document.getElementById('alphaTCell').textContent = formatNum(reg.tAlpha,3);
-    document.getElementById('alphaSigCell').textContent = significanceLabel(reg.tAlpha);
-
-    document.getElementById('betaCoefCell').textContent = formatNum(reg.beta);
+    document.getElementById('alphaSigCell').textContent = formatNum(pValueFromT(reg.tAlpha), 4);
+    document.getElementById('betaSigCell').textContent  = formatNum(pValueFromT(reg.tBeta), 4);
     document.getElementById('betaSeCell').textContent = formatNum(reg.seBeta);
     document.getElementById('betaTCell').textContent = formatNum(reg.tBeta,3);
     document.getElementById('betaSigCell').textContent = significanceLabel(reg.tBeta);
