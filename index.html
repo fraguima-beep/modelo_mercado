@@ -123,7 +123,7 @@ function nowTimestamp() {
 
 // mapear frecuencia a intervalo Yahoo
 function getInterval(freqValue) {
-  return freqValue; // '1d', '1wk', '1mo' [web:57]
+  return freqValue; // '1d', '1wk', '1mo'
 }
 
 // descarga precios desde Yahoo Finance vía proxy CORS
@@ -132,7 +132,7 @@ async function fetchYahooPrices(symbol, nYears, interval) {
   const period1 = yearsAgoTimestamp(nYears);
   const url = CORS_PROXY + encodeURIComponent(
     `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?period1=${period1}&period2=${period2}&interval=${interval}&includeAdjustedClose=true`
-  );[web:57]
+  );
 
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`Error HTTP ${resp.status} para ${symbol}`);
@@ -270,7 +270,7 @@ async function runCAPM() {
   if (freq === '1d') perYear = 252;
   else if (freq === '1wk') perYear = 52;
   else perYear = 12;
-  const rfPerPeriod = Math.pow(1 + rfAnnual, 1 / perYear) - 1;[web:50]
+  const rfPerPeriod = Math.pow(1 + rfAnnual, 1 / perYear) - 1;
 
   setStatus('Descargando datos de Yahoo Finance...', false);
   const resultsDiv = document.getElementById('resultsDiv');
