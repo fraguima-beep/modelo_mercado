@@ -193,6 +193,10 @@ function nowTimestamp() {
 function getInterval(freqValue) {
   return freqValue;
 }
+function formatNumEs(x, dec = 6) {
+  if (!isFinite(x)) return '-';
+  return x.toFixed(dec).replace('.', ',');
+}
 
 async function fetchYahooPrices(symbol, nYears, interval) {
   const period2 = nowTimestamp();
@@ -365,8 +369,8 @@ function fillDataTable() {
     const tdRi = document.createElement('td');
     tdDate.style.textAlign = 'left';
     tdDate.textContent = row.date;
-    tdRm.textContent = formatNum(row.rmExcess, 6);
-    tdRi.textContent = formatNum(row.riExcess, 6);
+    tdRm.textContent = formatNumEs(row.rmExcess, 6);
+    tdRi.textContent = formatNumEs(row.riExcess, 6);
     tr.appendChild(tdDate);
     tr.appendChild(tdRm);
     tr.appendChild(tdRi);
@@ -379,7 +383,7 @@ async function copyDataToClipboard() {
   if (!lastDataRows.length) return;
   let text = 'Fecha\tRm-Rf\tRi-Rf\n';
   lastDataRows.forEach(row => {
-    text += `${row.date}\t${row.rmExcess}\t${row.riExcess}\n`;
+    text += `${row.date}\t${formatNumEs(row.rmExcess, 6)}\t${formatNumEs(row.riExcess, 6)}\n`;
   });
   try {
     await navigator.clipboard.writeText(text);
