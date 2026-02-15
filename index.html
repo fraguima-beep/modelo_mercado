@@ -2,7 +2,8 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>CAPM – Frecuencia y Horizonte</title>
+  <title>CAPM – Frecuencia y Horizonte (Datos reales)</title>
+  <!-- Librerías necesarias -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/regression@2.0.1/dist/regression.min.js"></script>
   <style>
@@ -28,9 +29,9 @@
 </head>
 <body>
 <div class="container">
-  <h1>Modelo CAPM – Frecuencias y Horizontes</h1>
+  <h1>Modelo CAPM – Frecuencias y Horizontes (Datos reales)</h1>
   <p style="font-size: 14px; color: #666;">
-    Selecciona activo, frecuencia (diaria/semanal/mensual) y horizonte (1/3/5 años). Se usan datos más recientes disponibles.
+    Datos reales de mercado (Yahoo Finance) obtenidos vía proxy CORS. Selecciona activo, frecuencia y horizonte.
   </p>
 
   <div class="controls">
@@ -78,7 +79,6 @@
     <label for="rfInput">Rf anual (%):</label>
     <input id="rfInput" type="number" value="4.0" step="0.1" style="width:70px;">
 
-    <!-- Texto EXACTO "Calcular" -->
     <button id="calcBtn">Calcular</button>
   </div>
 
@@ -121,18 +121,18 @@ function nowTimestamp() {
   return Math.floor(Date.now() / 1000);
 }
 
-// intervalo Yahoo
+// mapear frecuencia a intervalo Yahoo
 function getInterval(freqValue) {
   return freqValue; // '1d', '1wk', '1mo' [web:57]
 }
 
-// descarga precios Yahoo
+// descarga precios desde Yahoo Finance vía proxy CORS
 async function fetchYahooPrices(symbol, nYears, interval) {
   const period2 = nowTimestamp();
   const period1 = yearsAgoTimestamp(nYears);
   const url = CORS_PROXY + encodeURIComponent(
     `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?period1=${period1}&period2=${period2}&interval=${interval}&includeAdjustedClose=true`
-  );[web:64][web:70]
+  );[web:57]
 
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`Error HTTP ${resp.status} para ${symbol}`);
@@ -146,7 +146,6 @@ async function fetchYahooPrices(symbol, nYears, interval) {
     throw new Error('Datos incompletos para ' + symbol);
   }
   const quote = ind.quote[0];
-  // muchos endpoints devuelven solo close y adjclose se construye; usamos close como aproximación [web:73]
   const closes = quote.adjclose || quote.close;
   if (!closes) throw new Error('Sin precios para ' + symbol);
 
@@ -163,7 +162,7 @@ async function fetchYahooPrices(symbol, nYears, interval) {
   return prices;
 }
 
-// rendimientos
+// rendimientos logarítmicos o simples (aquí simples)
 function returnsFromPrices(prices) {
   const rets = [];
   for (let i = 1; i < prices.length; i++) {
@@ -265,13 +264,13 @@ async function runCAPM() {
   const freq = document.getElementById('freqSelect').value;   // '1d','1wk','1mo'
   const horizon = parseInt(document.getElementById('horizonSelect').value, 10); // 1,3,5
   const rfAnnual = parseFloat(document.getElementById('rfInput').value) / 100;
-  const interval = getInterval(freq);[web:57]
+  const interval = getInterval(freq);
 
-  let periodsPerYear;
-  if (freq === '1d') periodsPerYear = 252;
-  else if (freq === '1wk') periodsPerYear = 52;
-  else periodsPerYear = 12;
-  const rfPerPeriod = Math.pow(1 + rfAnnual, 1 / periodsPerYear) - 1;[web:50]
+  let perYear;
+  if (freq === '1d') perYear = 252;
+  else if (freq === '1wk') perYear = 52;
+  else perYear = 12;
+  const rfPerPeriod = Math.pow(1 + rfAnnual, 1 / perYear) - 1;[web:50]
 
   setStatus('Descargando datos de Yahoo Finance...', false);
   const resultsDiv = document.getElementById('resultsDiv');
@@ -280,7 +279,7 @@ async function runCAPM() {
   try {
     const [assetPrices, marketPrices] = await Promise.all([
       fetchYahooPrices(ticker, horizon, interval),
-      fetchYahooPrices('SPY', horizon, interval)
+      fetchYahooPrices('SPY', horizon, interval)   // ETF S&P 500
     ]);
 
     const minLen = Math.min(assetPrices.length, marketPrices.length);
@@ -314,7 +313,7 @@ async function runCAPM() {
   }
 }
 
-// aquí conectamos el botón con runCAPM
+// conectar el botón con runCAPM (esto faltaba en tu archivo)
 document.getElementById('calcBtn').addEventListener('click', runCAPM);
 </script>
 </body>
