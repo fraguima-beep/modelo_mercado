@@ -14,15 +14,22 @@
     select, button, input { padding: 6px 10px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; }
     button { background: #28a745; color: #fff; cursor: pointer; border: none; }
     button:hover { background: #218838; }
-    .results { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 25px; }
+    .tabs { margin-top: 20px; border-bottom: 1px solid #ddd; display: flex; gap: 8px; }
+    .tab-btn { padding: 6px 12px; border: 1px solid #ddd; border-bottom: none; background: #f8f9fa; cursor: pointer; border-radius: 4px 4px 0 0; font-size: 13px; }
+    .tab-btn.active { background: #fff; font-weight: bold; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .results { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 25px; }
     .panel { flex: 1 1 380px; background: #fafafa; border-radius: 6px; padding: 15px; border: 1px solid #ddd; }
     .panel.full { flex: 1 1 500px; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: right; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border: 1px solid #ddd; padding: 4px 6px; text-align: right; }
     th { background: #e9ecef; text-align: left; }
     #status { margin-top: 10px; padding: 8px 10px; background: #d1ecf1; border-radius: 4px; font-size: 14px; }
     .success { background: #d4edda; color: #155724; }
     .error { background: #f8d7da; color: #721c24; }
+    #dataPanel { max-height: 260px; overflow: auto; }
+    #copyBtn { margin-bottom: 8px; float: right; font-size: 12px; padding: 4px 8px; }
     @media (max-width: 768px) { .controls, .results { flex-direction: column; } }
   </style>
 </head>
@@ -30,8 +37,7 @@
 <div class="container">
   <h1>Modelo de mercado – Estimación mediante regresión</h1>
   <p style="font-size: 14px; color: #666;">
-    Finanzas Cuantitativas.
-    &copy; Francisco Guijarro.
+    Finanzas Cuantitativas. &copy; 2026 Francisco Guijarro.
   </p>
 
   <div class="controls">
@@ -59,7 +65,6 @@
       <option value="XOM">XOM (Exxon Mobil)</option>
     </select>
 
-
     <label for="freqSelect">Frecuencia:</label>
     <select id="freqSelect">
       <option value="1d">Diaria</option>
@@ -82,44 +87,76 @@
 
   <div id="status">Listo para calcular.</div>
 
-  <div id="resultsDiv" class="results" style="display:none;">
-    <div class="panel">
-      <h3>Resultados regresión CAPM</h3>
-      <table>
+  <!-- Pestañas -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="tab-resultados">Resultados y gráfico</button>
+    <button class="tab-btn" data-tab="tab-datos">Datos usados</button>
+  </div>
+
+  <!-- Contenido pestaña Resultados -->
+  <div id="tab-resultados" class="tab-content active">
+    <div id="resultsDiv" class="results" style="display:none;">
+      <div class="panel">
+        <h3>Resultados regresión CAPM</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Parámetro</th>
+              <th>Coeficiente</th>
+              <th>Error estándar</th>
+              <th>t‑valor</th>
+              <th>p‑valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th>Alfa</th>
+              <td id="alphaCoefCell">-</td>
+              <td id="alphaSeCell">-</td>
+              <td id="alphaTCell">-</td>
+              <td id="alphaSigCell">-</td>
+            </tr>
+            <tr>
+              <th>Beta</th>
+              <td id="betaCoefCell">-</td>
+              <td id="betaSeCell">-</td>
+              <td id="betaTCell">-</td>
+              <td id="betaSigCell">-</td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="font-size: 12px; color:#666; margin-top:4px;">
+          R² de la regresión: <span id="r2Text">-</span>
+        </p>
+      </div>
+
+      <div class="panel full">
+        <h3>Exceso Ri vs Rm</h3>
+        <canvas id="scatterChart" height="190"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenido pestaña Datos -->
+  <div id="tab-datos" class="tab-content">
+    <div id="dataPanel" class="panel">
+      <h3>Datos usados en la regresión</h3>
+      <button id="copyBtn">Copiar datos</button>
+      <p style="font-size: 12px; color:#666; margin-top:4px; margin-bottom:6px;">
+        Formato: Fecha, Rm-Rf, Ri-Rf. Los valores son rendimientos del período seleccionado.
+      </p>
+      <table id="dataTable">
         <thead>
           <tr>
-            <th>Parámetro</th>
-            <th>Coeficiente</th>
-            <th>Error estándar</th>
-            <th>Estadístico t</th>
-            <th>p-valor</th>
+            <th style="text-align:left;">Fecha</th>
+            <th>Rm-Rf</th>
+            <th>Ri-Rf</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <th>Alfa</th>
-            <td id="alphaCoefCell">-</td>
-            <td id="alphaSeCell">-</td>
-            <td id="alphaTCell">-</td>
-            <td id="alphaSigCell">-</td>
-          </tr>
-          <tr>
-            <th>Beta</th>
-            <td id="betaCoefCell">-</td>
-            <td id="betaSeCell">-</td>
-            <td id="betaTCell">-</td>
-            <td id="betaSigCell">-</td>
-          </tr>
+          <!-- filas generadas por JS -->
         </tbody>
       </table>
-      <p style="font-size: 14px; color:#666; margin-top:4px;">
-        R² de la regresión: <span id="r2Text">-</span>
-      </p>
-    </div>
-
-    <div class="panel full">
-      <h3>Exceso Ri vs Rm</h3>
-      <canvas id="scatterChart" height="200"></canvas>
     </div>
   </div>
 </div>
@@ -127,6 +164,9 @@
 <script>
 let scatterChart = null;
 const CORS_PROXY = 'https://corsproxy.io/?';
+
+// aquí guardaremos los datos usados para poder mostrarlos/copiar
+let lastDataRows = []; // cada fila: {date, rmExcess, riExcess}
 
 function yearsAgoTimestamp(nYears) {
   const now = new Date();
@@ -181,7 +221,12 @@ function returnsFromPrices(prices) {
   for (let i = 1; i < prices.length; i++) {
     const p0 = prices[i-1].close;
     const p1 = prices[i].close;
-    if (p0 > 0 && p1 > 0) rets.push((p1 / p0) - 1);
+    if (p0 > 0 && p1 > 0) {
+      rets.push({
+        date: prices[i].date,
+        ret: (p1 / p0) - 1
+      });
+    }
   }
   return rets;
 }
@@ -219,16 +264,15 @@ function capmRegression(excessAsset, excessMarket) {
   return {alpha, beta, r2, seAlpha, seBeta, tAlpha, tBeta, points};
 }
 
-// aproximación de la CDF de la normal estándar
+// CDF normal aproximada
 function normalCdf(z) {
-  // Abramowitz & Stegun 7.1.26 aproximado
   const t = 1 / (1 + 0.2316419 * Math.abs(z));
   const d = 0.3989423 * Math.exp(-z * z / 2);
   const prob = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
   return z > 0 ? 1 - prob : prob;
 }
 
-// p-valor bilaterial aproximado a partir de t
+// p-valor bilateral aproximado
 function pValueFromT(t) {
   const a = Math.abs(t);
   const p = 2 * (1 - normalCdf(a));
@@ -297,6 +341,41 @@ function setStatus(msg, isError=false) {
   el.className = isError ? 'error' : 'success';
 }
 
+// Rellena la tabla de la pestaña "Datos usados"
+function fillDataTable() {
+  const tbody = document.querySelector('#dataTable tbody');
+  tbody.innerHTML = '';
+  lastDataRows.forEach(row => {
+    const tr = document.createElement('tr');
+    const tdDate = document.createElement('td');
+    const tdRm = document.createElement('td');
+    const tdRi = document.createElement('td');
+    tdDate.style.textAlign = 'left';
+    tdDate.textContent = row.date;
+    tdRm.textContent = formatNum(row.rmExcess, 6);
+    tdRi.textContent = formatNum(row.riExcess, 6);
+    tr.appendChild(tdDate);
+    tr.appendChild(tdRm);
+    tr.appendChild(tdRi);
+    tbody.appendChild(tr);
+  });
+}
+
+// Copia los datos al portapapeles en formato tabulado
+async function copyDataToClipboard() {
+  if (!lastDataRows.length) return;
+  let text = 'Fecha\tRm-Rf\tRi-Rf\n';
+  lastDataRows.forEach(row => {
+    text += `${row.date}\t${row.rmExcess}\t${row.riExcess}\n`;
+  });
+  try {
+    await navigator.clipboard.writeText(text);
+    alert('Datos copiados al portapapeles.');
+  } catch (e) {
+    alert('No se han podido copiar los datos (permiso del navegador).');
+  }
+}
+
 async function runCAPM() {
   const ticker = document.getElementById('tickerSelect').value;
   const freq = document.getElementById('freqSelect').value;
@@ -313,6 +392,7 @@ async function runCAPM() {
   setStatus('Descargando datos de Yahoo Finance...', false);
   const resultsDiv = document.getElementById('resultsDiv');
   resultsDiv.style.display = 'none';
+  lastDataRows = [];
 
   try {
     const [assetPrices, marketPrices] = await Promise.all([
@@ -323,12 +403,25 @@ async function runCAPM() {
     const minLen = Math.min(assetPrices.length, marketPrices.length);
     if (minLen < 40) throw new Error('Muy pocas observaciones para ese horizonte/frecuencia.');
 
-    const assetRets = returnsFromPrices(assetPrices.slice(0, minLen));
-    const marketRets = returnsFromPrices(marketPrices.slice(0, minLen));
+    const assetRetsAll = returnsFromPrices(assetPrices.slice(0, minLen));
+    const marketRetsAll = returnsFromPrices(marketPrices.slice(0, minLen));
 
-    const nObs = assetRets.length;
-    const assetExcess = assetRets.map(r => r - rfPerPeriod);
-    const marketExcess = marketRets.map(r => r - rfPerPeriod);
+    const nObs = Math.min(assetRetsAll.length, marketRetsAll.length);
+
+    const assetExcess = [];
+    const marketExcess = [];
+    lastDataRows = [];
+
+    for (let i = 0; i < nObs; i++) {
+      const ri = assetRetsAll[i].ret;
+      const rm = marketRetsAll[i].ret;
+      const riEx = ri - rfPerPeriod;
+      const rmEx = rm - rfPerPeriod;
+      assetExcess.push(riEx);
+      marketExcess.push(rmEx);
+      const dateStr = assetRetsAll[i].date.toISOString().slice(0,10);
+      lastDataRows.push({date: dateStr, rmExcess: rmEx, riExcess: riEx});
+    }
 
     const reg = capmRegression(assetExcess, marketExcess);
 
@@ -336,7 +429,7 @@ async function runCAPM() {
     document.getElementById('alphaSeCell').textContent   = formatNum(reg.seAlpha);
     document.getElementById('alphaTCell').textContent    = formatNum(reg.tAlpha, 3);
     document.getElementById('alphaSigCell').textContent  = formatNum(pValueFromT(reg.tAlpha), 4);
-    
+
     document.getElementById('betaCoefCell').textContent  = formatNum(reg.beta);
     document.getElementById('betaSeCell').textContent    = formatNum(reg.seBeta);
     document.getElementById('betaTCell').textContent     = formatNum(reg.tBeta, 3);
@@ -346,6 +439,7 @@ async function runCAPM() {
 
     plotScatter(reg.points);
     resultsDiv.style.display = 'flex';
+    fillDataTable(); // rellena tabla de datos
 
     const freqLabel = (freq === '1d') ? 'diarios' : (freq === '1wk' ? 'semanales' : 'mensuales');
     setStatus(`CAPM calculado para ${ticker} vs SPY: ${nObs} rendimientos ${freqLabel} en los últimos ${horizon} años.`, false);
@@ -355,7 +449,18 @@ async function runCAPM() {
   }
 }
 
+// pestañas
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
 document.getElementById('calcBtn').addEventListener('click', runCAPM);
+document.getElementById('copyBtn').addEventListener('click', copyDataToClipboard);
 </script>
 </body>
 </html>
