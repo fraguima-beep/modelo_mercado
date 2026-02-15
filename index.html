@@ -15,8 +15,21 @@
     button { background: #28a745; color: #fff; cursor: pointer; border: none; }
     button:hover { background: #218838; }
     .tabs { margin-top: 20px; border-bottom: 1px solid #ddd; display: flex; gap: 8px; }
-    .tab-btn { padding: 6px 12px; border: 1px solid #ddd; border-bottom: none; background: #f8f9fa; cursor: pointer; border-radius: 4px 4px 0 0; font-size: 13px; }
-    .tab-btn.active { background: #fff; font-weight: bold; }
+    .tab-btn {
+      padding: 6px 12px;
+      border: 1px solid #ddd;
+      border-bottom: none;
+      background: #f8f9fa;
+      cursor: pointer;
+      border-radius: 4px 4px 0 0;
+      font-size: 13px;
+      color: #000;
+    }
+    .tab-btn.active {
+      background: #fff;
+      font-weight: bold;
+      color: #000;
+    }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     .results { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 25px; }
