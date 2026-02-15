@@ -28,10 +28,10 @@
 </head>
 <body>
 <div class="container">
-  <h1>Modelo CAPM – Frecuencias y Horizontes (Datos reales)</h1>
+  <h1>Modelo de mercado – Estimación mediante regresión</h1>
   <p style="font-size: 14px; color: #666;">
-    Datos reales de mercado (Yahoo Finance) obtenidos vía proxy CORS. Selecciona activo, frecuencia y horizonte.
-    &copy; 2026 Francisco Guijarro.
+    Finanzas Cuantitativas.
+    &copy; Francisco Guijarro.
   </p>
 
   <div class="controls">
@@ -337,8 +337,9 @@ async function runCAPM() {
     document.getElementById('alphaCoefCell').textContent = formatNum(reg.alpha);
     document.getElementById('alphaSeCell').textContent = formatNum(reg.seAlpha);
     document.getElementById('alphaTCell').textContent = formatNum(reg.tAlpha,3);
-    document.getElementById('alphaSigCell').textContent = formatNum(pValueFromT(reg.tAlpha), 4);
-    document.getElementById('betaSigCell').textContent  = formatNum(pValueFromT(reg.tBeta), 4);
+    document.getElementById('alphaSigCell').textContent = significanceLabel(reg.tAlpha);
+
+    document.getElementById('betaCoefCell').textContent = formatNum(reg.beta);
     document.getElementById('betaSeCell').textContent = formatNum(reg.seBeta);
     document.getElementById('betaTCell').textContent = formatNum(reg.tBeta,3);
     document.getElementById('betaSigCell').textContent = significanceLabel(reg.tBeta);
@@ -360,4 +361,3 @@ document.getElementById('calcBtn').addEventListener('click', runCAPM);
 </script>
 </body>
 </html>
-
