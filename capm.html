@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>CAPM – Frecuencia y Horizonte</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/regression@2.0.1/dist/regression.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+    h1 { text-align: center; }
+    .container { max-width: 1100px; margin: 0 auto; background: #fff; padding: 20px 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 20px; }
+    label { font-weight: bold; }
+    select, button, input { padding: 6px 10px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; }
+    button { background: #28a745; color: #fff; cursor: pointer; border: none; }
+    button:hover { background: #218838; }
+    .results { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 25px; }
+    .panel { flex: 1 1 260px; background: #fafafa; border-radius: 6px; padding: 15px; border: 1px solid #ddd; }
+    .panel.full { flex: 2 1 400px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: right; }
+    th { background: #e9ecef; text-align: left; }
+    #status { margin-top: 10px; padding: 8px 10px; background: #d1ecf1; border-radius: 4px; font-size: 14px; }
+    .success { background: #d4edda; color: #155724; }
+    .error { background: #f8d7da; color: #721c24; }
+    @media (max-width: 768px) { .controls { flex-direction: column; align-items: stretch; } }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Modelo CAPM – Frecuencias y Horizontes</h1>
+  <p style="font-size: 14px; color: #666;">
+    Selecciona activo, frecuencia (diaria/semanal/mensual) y horizonte (1/3/5 años). Se usan datos más recientes disponibles.
+  </p>
+
+  <div class="controls">
+    <label for="tickerSelect">Activo:</label>
+    <select id="tickerSelect">
+      <!-- Tech / growth -->
+      <option value="AAPL">AAPL (Apple)</option>
+      <option value="MSFT" selected>MSFT (Microsoft)</option>
+      <option value="GOOGL">GOOGL (Alphabet)</option>
+      <option value="AMZN">AMZN (Amazon)</option>
+      <option value="META">META (Meta Platforms)</option>
+      <option value="TSLA">TSLA (Tesla)</option>
+      <option value="NVDA">NVDA (Nvidia)</option>
+      <!-- Consumo defensivo / marcas globales -->
+      <option value="KO">KO (Coca-Cola)</option>
+      <option value="PEP">PEP (PepsiCo)</option>
+      <option value="MCD">MCD (McDonald's)</option>
+      <option value="NKE">NKE (Nike)</option>
+      <option value="PG">PG (Procter & Gamble)</option>
+      <option value="WMT">WMT (Walmart)</option>
+      <option value="COST">COST (Costco)</option>
+      <!-- Bancos y energía -->
+      <option value="JPM">JPM (JPMorgan Chase)</option>
+      <option value="BAC">BAC (Bank of America)</option>
+      <option value="C">C (Citigroup)</option>
+      <option value="XOM">XOM (Exxon Mobil)</option>
+      <option value="CVX">CVX (Chevron)</option>
+      <option value="UNH">UNH (UnitedHealth)</option>
+    </select>
+
+    <label for="freqSelect">Frecuencia:</label>
+    <select id="freqSelect">
+      <option value="1d">Diaria</option>
+      <option value="1wk" selected>Semanal</option>
+      <option value="1mo">Mensual</option>
+    </select>
+
+    <label for="horizonSelect">Horizonte:</label>
+    <select id="horizonSelect">
+      <option value="1">1 año</option>
+      <option value="3">3 años</option>
+      <option value="5" selected>5 años</option>
+    </select>
+
+    <label for="rfInput">Rf anual (%):</label>
+    <input id="rfInput" type="number" value="4.0" step="0.1" style="width:70px;">
+
+    <!-- Texto EXACTO "Calcular" -->
+    <button id="calcBtn">Calcular</button>
+  </div>
+
+  <div id="status">Listo para calcular.</div>
+
+  <div id="resultsDiv" class="results" style="display:none;">
+    <div class="panel">
+      <h3>Resultados regresión CAPM</h3>
+      <table>
+        <tbody>
+          <tr><th>Alfa (por período)</th><td id="alphaCell">-</td></tr>
+          <tr><th>Beta</th><td id="betaCell">-</td></tr>
+          <tr><th>R²</th><td id="r2Cell">-</td></tr>
+          <tr><th>Error estándar alfa</th><td id="seAlphaCell">-</td></tr>
+          <tr><th>Error estándar beta</th><td id="seBetaCell">-</td></tr>
+          <tr><th>t alfa</th><td id="tAlphaCell">-</td></tr>
+          <tr><th>t beta</th><td id="tBetaCell">-</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel full">
+      <h3>Exceso Ri vs Rm</h3>
+      <canvas id="scatterChart" height="300"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+let scatterChart = null;
+const CORS_PROXY = 'https://corsproxy.io/?';
+
+// timestamp hace n años
+function yearsAgoTimestamp(nYears) {
+  const now = new Date();
+  const past = new Date();
+  past.setFullYear(now.getFullYear() - nYears);
+  return Math.floor(past.getTime() / 1000);
+}
+function nowTimestamp() {
+  return Math.floor(Date.now() / 1000);
+}
+
+// intervalo Yahoo
+function getInterval(freqValue) {
+  return freqValue; // '1d', '1wk', '1mo' [web:57]
+}
+
+// descarga precios Yahoo
+async function fetchYahooPrices(symbol, nYears, interval) {
+  const period2 = nowTimestamp();
+  const period1 = yearsAgoTimestamp(nYears);
+  const url = CORS_PROXY + encodeURIComponent(
+    `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?period1=${period1}&period2=${period2}&interval=${interval}&includeAdjustedClose=true`
+  );[web:64][web:70]
+
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`Error HTTP ${resp.status} para ${symbol}`);
+  const data = await resp.json();
+  const result = data.chart?.result?.[0];
+  if (!result) throw new Error('Respuesta inválida para ' + symbol);
+
+  const timestamps = result.timestamp;
+  const ind = result.indicators;
+  if (!timestamps || !ind || !ind.quote || !ind.quote[0]) {
+    throw new Error('Datos incompletos para ' + symbol);
+  }
+  const quote = ind.quote[0];
+  // muchos endpoints devuelven solo close y adjclose se construye; usamos close como aproximación [web:73]
+  const closes = quote.adjclose || quote.close;
+  if (!closes) throw new Error('Sin precios para ' + symbol);
+
+  const prices = [];
+  for (let i = 0; i < timestamps.length; i++) {
+    const c = closes[i];
+    if (c == null || c <= 0) continue;
+    prices.push({
+      date: new Date(timestamps[i] * 1000),
+      close: c
+    });
+  }
+  prices.sort((a,b) => a.date - b.date);
+  return prices;
+}
+
+// rendimientos
+function returnsFromPrices(prices) {
+  const rets = [];
+  for (let i = 1; i < prices.length; i++) {
+    const p0 = prices[i-1].close;
+    const p1 = prices[i].close;
+    if (p0 > 0 && p1 > 0) rets.push((p1 / p0) - 1);
+  }
+  return rets;
+}
+
+function mean(arr) {
+  return arr.reduce((a,b)=>a+b,0) / arr.length;
+}
+
+// regresión CAPM
+function capmRegression(excessAsset, excessMarket) {
+  const points = excessMarket.map((x,i) => [x, excessAsset[i]]);
+  const reg = regression.linear(points);
+  const beta = reg.equation[0];
+  const alpha = reg.equation[1];
+
+  const x = excessMarket;
+  const y = excessAsset;
+  const n = x.length;
+  const yHat = x.map(xi => alpha + beta * xi);
+  const yMean = mean(y);
+  let ssRes = 0, ssTot = 0;
+  for (let i = 0; i < n; i++) {
+    ssRes += (y[i] - yHat[i])**2;
+    ssTot += (y[i] - yMean)**2;
+  }
+  const r2 = 1 - ssRes/ssTot;
+  const s2 = ssRes / (n - 2);
+  const xMean = mean(x);
+  let sxx = 0;
+  for (let i = 0; i < n; i++) sxx += (x[i] - xMean)**2;
+  const seBeta = Math.sqrt(s2/sxx);
+  const seAlpha = Math.sqrt(s2 * (1/n + xMean**2/sxx));
+  const tAlpha = alpha / seAlpha;
+  const tBeta = beta / seBeta;
+
+  return {alpha, beta, r2, seAlpha, seBeta, tAlpha, tBeta, points};
+}
+
+// gráfico
+function plotScatter(points) {
+  const ctx = document.getElementById('scatterChart').getContext('2d');
+  if (scatterChart) scatterChart.destroy();
+  const xs = points.map(p=>p[0]);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const reg = regression.linear(points);
+  const line = [
+    {x: minX, y: reg.predict(minX)[1]},
+    {x: maxX, y: reg.predict(maxX)[1]}
+  ];
+  scatterChart = new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [
+        {
+          label: 'Observaciones (Ri - Rf vs Rm - Rf)',
+          data: points.map(p=>({x:p[0], y:p[1]})),
+          backgroundColor: 'rgba(54,162,235,0.7)',
+          pointRadius: 3
+        },
+        {
+          type: 'line',
+          label: 'Recta CAPM',
+          data: line,
+          borderColor: 'rgba(255,99,132,0.95)',
+          pointRadius: 0,
+          borderWidth: 2
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {legend: {position: 'top'}},
+      scales: {
+        x: {title: {display:true, text:'Exceso mercado Rm - Rf'}},
+        y: {title: {display:true, text:'Exceso activo Ri - Rf'}}
+      }
+    }
+  });
+}
+
+function formatNum(x, dec=4) {
+  return isFinite(x) ? x.toFixed(dec) : '-';
+}
+function setStatus(msg, isError=false) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = isError ? 'error' : 'success';
+}
+
+async function runCAPM() {
+  const ticker = document.getElementById('tickerSelect').value;
+  const freq = document.getElementById('freqSelect').value;   // '1d','1wk','1mo'
+  const horizon = parseInt(document.getElementById('horizonSelect').value, 10); // 1,3,5
+  const rfAnnual = parseFloat(document.getElementById('rfInput').value) / 100;
+  const interval = getInterval(freq);[web:57]
+
+  let periodsPerYear;
+  if (freq === '1d') periodsPerYear = 252;
+  else if (freq === '1wk') periodsPerYear = 52;
+  else periodsPerYear = 12;
+  const rfPerPeriod = Math.pow(1 + rfAnnual, 1 / periodsPerYear) - 1;[web:50]
+
+  setStatus('Descargando datos de Yahoo Finance...', false);
+  const resultsDiv = document.getElementById('resultsDiv');
+  resultsDiv.style.display = 'none';
+
+  try {
+    const [assetPrices, marketPrices] = await Promise.all([
+      fetchYahooPrices(ticker, horizon, interval),
+      fetchYahooPrices('SPY', horizon, interval)
+    ]);
+
+    const minLen = Math.min(assetPrices.length, marketPrices.length);
+    if (minLen < 40) throw new Error('Muy pocas observaciones para ese horizonte/frecuencia.');
+
+    const assetRets = returnsFromPrices(assetPrices.slice(0, minLen));
+    const marketRets = returnsFromPrices(marketPrices.slice(0, minLen));
+
+    const nObs = assetRets.length;
+    const assetExcess = assetRets.map(r => r - rfPerPeriod);
+    const marketExcess = marketRets.map(r => r - rfPerPeriod);
+
+    const reg = capmRegression(assetExcess, marketExcess);
+
+    document.getElementById('alphaCell').textContent = formatNum(reg.alpha);
+    document.getElementById('betaCell').textContent = formatNum(reg.beta);
+    document.getElementById('r2Cell').textContent = formatNum(reg.r2, 4);
+    document.getElementById('seAlphaCell').textContent = formatNum(reg.seAlpha);
+    document.getElementById('seBetaCell').textContent = formatNum(reg.seBeta);
+    document.getElementById('tAlphaCell').textContent = formatNum(reg.tAlpha, 3);
+    document.getElementById('tBetaCell').textContent = formatNum(reg.tBeta, 3);
+
+    plotScatter(reg.points);
+    resultsDiv.style.display = 'flex';
+
+    const freqLabel = (freq === '1d') ? 'diarios' : (freq === '1wk' ? 'semanales' : 'mensuales');
+    setStatus(`CAPM calculado para ${ticker} vs SPY: ${nObs} rendimientos ${freqLabel} en los últimos ${horizon} años.`, false);
+  } catch (err) {
+    console.error(err);
+    setStatus('Error: ' + err.message, true);
+  }
+}
+
+// aquí conectamos el botón con runCAPM
+document.getElementById('calcBtn').addEventListener('click', runCAPM);
+</script>
+</body>
+</html>
